@@ -1,24 +1,39 @@
 import numpy as np
 import tensorflow as tf
 
-# -----------------------------
-# 1. Training text
-# -----------------------------
+# --------------------------------
+# 1. Training sentences
+# --------------------------------
 
-text = "machine learning is fun and machine learning is useful"
+sentences = [
+    "machine learning is useful",
+    "machine learning is interesting",
+    "machine learning is powerful",
+    "deep learning is useful",
+    "deep learning is interesting",
+    "artificial intelligence is useful",
+    "natural language processing is useful",
+    "machine learning is important",
+    "machine learning is fun"
+]
 
-# Get characters
+# Combine all sentences
+text = " ".join(sentences).lower()
+
+# --------------------------------
+# 2. Create character dictionary
+# --------------------------------
+
 chars = sorted(set(text))
 
-# Convert character to number
-char_to_int = {c:i for i, c in enumerate(chars)}
+char_to_int = {c: i for i, c in enumerate(chars)}
+int_to_char = {i: c for i, c in enumerate(chars)}
 
-# Convert number to character
-int_to_char = {i:c for i, c in enumerate(chars)}
+print("Characters:", chars)
 
-# -----------------------------
-# 2. Create sequences
-# -----------------------------
+# --------------------------------
+# 3. Create training sequences
+# --------------------------------
 
 seq_length = 4
 
@@ -26,33 +41,49 @@ X = []
 y = []
 
 for i in range(len(text) - seq_length):
-    sequence = text[i:i+seq_length]
 
+    # Take 4 characters
+    sequence = text[i:i + seq_length]
+
+    # Next character
+    next_char = text[i + seq_length]
+
+    # Convert characters to numbers
     X.append([char_to_int[c] for c in sequence])
-    y.append(char_to_int[text[i+seq_length]])
+    y.append(char_to_int[next_char])
 
 X = np.array(X)
 y = np.array(y)
 
-# One-hot encoding
+# One-hot encode input
 X = tf.keras.utils.to_categorical(
     X,
     num_classes=len(chars)
 )
 
-# -----------------------------
-# 3. Create LSTM model
-# -----------------------------
+print("Training sequences:", len(X))
+
+# --------------------------------
+# 4. Create LSTM model
+# --------------------------------
 
 model = tf.keras.Sequential([
-    tf.keras.Input(shape=(seq_length, len(chars))),
+    
+    tf.keras.Input(
+        shape=(seq_length, len(chars))
+    ),
+
     tf.keras.layers.LSTM(64),
-    tf.keras.layers.Dense(len(chars), activation="softmax")
+
+    tf.keras.layers.Dense(
+        len(chars),
+        activation="softmax"
+    )
 ])
 
-# -----------------------------
-# 4. Compile
-# -----------------------------
+# --------------------------------
+# 5. Compile model
+# --------------------------------
 
 model.compile(
     optimizer="adam",
@@ -60,9 +91,9 @@ model.compile(
     metrics=["accuracy"]
 )
 
-# -----------------------------
-# 5. Train
-# -----------------------------
+# --------------------------------
+# 6. Train model
+# --------------------------------
 
 model.fit(
     X,
@@ -71,37 +102,62 @@ model.fit(
     verbose=0
 )
 
-# -----------------------------
-# 6. Function for prediction
-# -----------------------------
+print("\nLSTM model trained successfully!")
 
-def predict_next(word):
+# --------------------------------
+# 7. Predict next character
+# --------------------------------
 
-    sequence = []
+def predict_next(sequence):
 
-    for c in word:
-        sequence.append(char_to_int[c])
+    sequence = sequence.lower()
 
-    sequence = np.array([sequence])
+    # Check length
+    if len(sequence) != 4:
+        print("Please enter exactly 4 characters.")
+        return
 
-    sequence = tf.keras.utils.to_categorical(
-        sequence,
+    # Check characters
+    for c in sequence:
+        if c not in char_to_int:
+            print("Character not found in training data.")
+            return
+
+    # Convert characters to numbers
+    input_seq = [
+        char_to_int[c] for c in sequence
+    ]
+
+    # Convert to array
+    input_seq = np.array([input_seq])
+
+    # One-hot encoding
+    input_seq = tf.keras.utils.to_categorical(
+        input_seq,
         num_classes=len(chars)
     )
 
-    prediction = model.predict(sequence, verbose=0)
+    # Prediction
+    prediction = model.predict(
+        input_seq,
+        verbose=0
+    )
 
-    result = int_to_char[np.argmax(prediction)]
+    # Get character with highest probability
+    predicted_char = int_to_char[
+        np.argmax(prediction)
+    ]
 
-    print(word, "→", result)
+    print("\nInput sequence:", sequence)
+    print("Predicted next character:", predicted_char)
 
 
-# -----------------------------
-# 7. Test multiple inputs
-# -----------------------------
+# --------------------------------
+# 8. User input
+# --------------------------------
 
-predict_next("mach")
-predict_next("achi")
-predict_next("fu")
-predict_next("lear")
+sequence = input(
+    "\nEnter 4 characters: "
+)
 
+predict_next(sequence)
